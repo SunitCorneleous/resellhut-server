@@ -46,7 +46,6 @@ async function run() {
       }
 
       const result = await usersCollections.insertOne(user);
-
       res.send(result);
     });
 
@@ -64,6 +63,17 @@ async function run() {
       }
 
       res.status(403).send({ accessToken: "" });
+    });
+
+    // check user type
+    app.get("/usertype", async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+
+      const allUsers = await usersCollections.find(query).toArray();
+      const user = allUsers.find(user => user.email === email);
+
+      res.send({ userType: user.userType });
     });
   } finally {
   }
