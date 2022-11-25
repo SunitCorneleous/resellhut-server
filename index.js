@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(cors());
 
 // mongodb config
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.jjvalws.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
@@ -22,8 +22,6 @@ const client = new MongoClient(uri, {
 function verifyJWT(req, res, next) {
   // get authorization from header
   const authHeader = req.headers.authorization;
-
-  console.log(authHeader);
 
   // check if the header exists
   if (!authHeader) {
@@ -120,17 +118,60 @@ async function run() {
       const sellerFilter = { email: product.sellerEmail };
 
       const postedTime = new Date();
-      const sellerVerification = await usersCollections.findOne(sellerFilter)
-        .verified;
+      const sellerVerification = await usersCollections.findOne(sellerFilter);
 
       product.posted = postedTime;
-      product.sellerVerification = sellerVerification;
+      product.sellerVerification = sellerVerification.verified;
       product.saleStatus = "unsold";
 
       const result = await productsCollections.insertOne(product);
 
       console.log(result);
 
+      res.send(result);
+    });
+
+    // get all products of seller by email
+    app.get("/myproducts", verifyJWT, verifySeller, async (req, res) => {
+      const email = req.query.email;
+      const query = { sellerEmail: email };
+
+      const products = await productsCollections.find(query).toArray();
+
+      res.send(products);
+    });
+
+    //delete specific product by id
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+
+      const result = await productsCollections.deleteOne(query);
+
+      res.send(result);
+    });
+
+    // save a product for advertisement
+    app.get("/advertisement/:id", async (req, res) => {
+      const productId = req.params.id;
+      const query = { _id: ObjectId(productId) };
+
+      const laptop = await productsCollections.findOne(query);
+      const advertisedLaptop = { ...laptop, advertised: true };
+      console.log(advertisedLaptop);
+
+      const updatedDoc = {
+        $set: advertisedLaptop,
+      };
+      const options = { upsert: true };
+
+      const result = await productsCollections.updateOne(
+        query,
+        updatedDoc,
+        options
+      );
+
+      console.log(result);
       res.send(result);
     });
   } finally {
