@@ -18,14 +18,52 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
-// mongodb run
+//verify jwt
+function verifyJWT(req, res, next) {
+  // get authorization from header
+  const authHeader = req.headers.authorization;
 
+  console.log(authHeader);
+
+  // check if the header exists
+  if (!authHeader) {
+    return res.status(401).send("unauthorized access");
+  }
+
+  // split the token
+  const token = authHeader.split(" ")[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "forbidden access" });
+    }
+
+    req.decoded = decoded;
+    next();
+  });
+}
+
+// mongodb run
 async function run() {
   try {
     const categoriesCollection = client
       .db("resellxDB")
       .collection("categories");
     const usersCollections = client.db("resellxDB").collection("users");
+    const productsCollections = client.db("resellxDB").collection("products");
+
+    // verify seller
+    const verifySeller = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const filter = { email: decodedEmail };
+      const user = await usersCollections.findOne(filter);
+
+      if (user?.userType === "seller") {
+        return next();
+      }
+
+      return res.status(403).send({ message: "forbidden access" });
+    };
 
     // get all categories
     app.get("/categories", async (req, res) => {
@@ -74,6 +112,26 @@ async function run() {
       const user = allUsers.find(user => user.email === email);
 
       res.send({ userType: user.userType });
+    });
+
+    // add products to db as seller
+    app.post("/products", verifyJWT, verifySeller, async (req, res) => {
+      const product = req.body;
+      const sellerFilter = { email: product.sellerEmail };
+
+      const postedTime = new Date();
+      const sellerVerification = await usersCollections.findOne(sellerFilter)
+        .verified;
+
+      product.posted = postedTime;
+      product.sellerVerification = sellerVerification;
+      product.saleStatus = "unsold";
+
+      const result = await productsCollections.insertOne(product);
+
+      console.log(result);
+
+      res.send(result);
     });
   } finally {
   }
