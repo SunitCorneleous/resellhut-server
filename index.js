@@ -11,6 +11,7 @@ app.use(cors());
 
 // mongodb config
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { query } = require("express");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.jjvalws.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
@@ -71,6 +72,19 @@ async function run() {
       const user = await usersCollections.findOne(filter);
 
       if (user?.userType === "user") {
+        return next();
+      }
+
+      return res.status(403).send({ message: "forbidden access" });
+    };
+
+    // verify admin
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const filter = { email: decodedEmail };
+      const user = await usersCollections.findOne(filter);
+
+      if (user?.userType === "admin") {
         return next();
       }
 
@@ -158,8 +172,6 @@ async function run() {
 
       const result = await productsCollections.insertOne(product);
 
-      console.log(result);
-
       res.send(result);
     });
 
@@ -184,7 +196,7 @@ async function run() {
     });
 
     // save a product for advertisement
-    app.get("/advertisement/:id", async (req, res) => {
+    app.get("/advertisement/:id", verifyJWT, verifySeller, async (req, res) => {
       const productId = req.params.id;
       const query = { _id: ObjectId(productId) };
 
@@ -231,6 +243,116 @@ async function run() {
       const result = await bookingCollections.insertOne(booking);
 
       res.send(result);
+    });
+
+    // get all booking as user
+    app.get("/bookings", verifyJWT, verifyUser, async (req, res) => {
+      const email = req.query.email;
+
+      const query = { email: email };
+      const result = await bookingCollections.find(query).toArray();
+
+      res.send(result);
+    });
+
+    // all seller for admin
+    app.get("/allsellers", verifyJWT, verifyAdmin, async (req, res) => {
+      const query = { userType: "seller" };
+
+      const sellers = await usersCollections.find(query).toArray();
+
+      res.send(sellers);
+    });
+
+    // all buyers for admin
+    app.get("/buyers", verifyJWT, verifyAdmin, async (req, res) => {
+      const query = { userType: "user" };
+
+      const buyers = await usersCollections.find(query).toArray();
+
+      res.send(buyers);
+    });
+
+    // delete a seller as admin
+    app.delete("/allsellers", verifyJWT, verifyAdmin, async (req, res) => {
+      console.log("seller delete api hit");
+
+      const id = req.query.id;
+      const email = req.query.email;
+
+      const query = { _id: ObjectId(id) };
+      const queryForProduct = { sellerEmail: email };
+
+      const result = await usersCollections.deleteOne(query);
+      const productDeleted = await productsCollections.deleteMany(
+        queryForProduct
+      );
+
+      console.log(result);
+      console.log(productDeleted);
+      res.send(result);
+    });
+
+    // delete a buyer as admin
+    app.delete("/buyers", verifyJWT, verifyAdmin, async (req, res) => {
+      console.log("buyer delete api hit");
+
+      const id = req.query.id;
+      const email = req.query.email;
+
+      const query = { _id: ObjectId(id) };
+      const queryForProduct = { email: email };
+
+      const result = await usersCollections.deleteOne(query);
+      const bookingDelete = await bookingCollections.deleteMany(
+        queryForProduct
+      );
+
+      console.log(result);
+      console.log(bookingDelete);
+      res.send(result);
+    });
+
+    // verify a seller as admin
+    app.get("/verifyseller", verifyJWT, verifyAdmin, async (req, res) => {
+      console.log("***verify seller api hit***");
+      const email = req.query.email;
+
+      const sellerQuery = { email: email };
+      const seller = await usersCollections.findOne(sellerQuery);
+      const updateSeller = {
+        _id: seller._id,
+        name: seller.name,
+        email: seller.email,
+        userTyper: seller.userType,
+        verified: true,
+      };
+
+      const updatedDoc = {
+        $set: updateSeller,
+      };
+      const options = { upsert: true };
+
+      const result = await usersCollections.updateOne(
+        sellerQuery,
+        updatedDoc,
+        options
+      );
+
+      const updateProduct = { sellerVerification: true };
+      const updateProductQuery = { sellerEmail: email };
+
+      const updateProductDoc = {
+        $set: updateProduct,
+      };
+
+      const productResult = await productsCollections.updateMany(
+        updateProductQuery,
+        updateProductDoc
+      );
+
+      console.log(productResult);
+      res.send(productResult);
     });
   } finally {
   }
