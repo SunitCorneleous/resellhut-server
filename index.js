@@ -49,6 +49,7 @@ async function run() {
       .collection("categories");
     const usersCollections = client.db("resellxDB").collection("users");
     const productsCollections = client.db("resellxDB").collection("products");
+    const bookingCollections = client.db("resellxDB").collection("booking");
 
     // verify seller
     const verifySeller = async (req, res, next) => {
@@ -57,6 +58,19 @@ async function run() {
       const user = await usersCollections.findOne(filter);
 
       if (user?.userType === "seller") {
+        return next();
+      }
+
+      return res.status(403).send({ message: "forbidden access" });
+    };
+
+    // verify user
+    const verifyUser = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const filter = { email: decodedEmail };
+      const user = await usersCollections.findOne(filter);
+
+      if (user?.userType === "user") {
         return next();
       }
 
@@ -190,6 +204,32 @@ async function run() {
       );
 
       console.log(result);
+      res.send(result);
+    });
+
+    // get sdvertised products
+    app.get("/advertisement", async (req, res) => {
+      const query = { advertised: true, saleStatus: "unsold" };
+
+      const advertisedLaptops = await productsCollections.find(query).toArray();
+
+      res.send(advertisedLaptops);
+    });
+
+    // save booking to db
+    app.post("/bookings", verifyJWT, verifyUser, async (req, res) => {
+      const booking = req.body;
+
+      const query = { productId: booking.productId, email: booking.email };
+
+      const exists = await bookingCollections.findOne(query);
+
+      if (exists) {
+        return res.send({ product: "product already booked" });
+      }
+
+      const result = await bookingCollections.insertOne(booking);
+
       res.send(result);
     });
   } finally {
