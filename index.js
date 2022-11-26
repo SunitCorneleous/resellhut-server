@@ -70,6 +70,24 @@ async function run() {
       res.send(categories);
     });
 
+    // get products by category
+    app.get("/category/:id", async (req, res) => {
+      const categoryId = req.params.id;
+      const categoryQuery = { _id: ObjectId(categoryId) };
+
+      const category = await categoriesCollection.findOne(categoryQuery);
+
+      const query = {};
+
+      const allProducts = await productsCollections.find(query).toArray();
+
+      const laptops = allProducts.filter(
+        laptop => laptop.category === category.name
+      );
+
+      res.send(laptops);
+    });
+
     //save user to db
     app.post("/users", async (req, res) => {
       const user = req.body;
