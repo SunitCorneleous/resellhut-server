@@ -376,7 +376,24 @@ async function run() {
       res.send(allItems);
     });
 
-    //
+    //delete reported items as admin
+    app.delete("/deleteItem", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.query.id;
+      const reportid = req.query.reportid;
+
+      const query = { _id: ObjectId(id) };
+      const reportQuery = { _id: ObjectId(reportid) };
+
+      const result = await productsCollections.deleteOne(query);
+      const reportResult = await reportedItemsCollections.deleteOne(
+        reportQuery
+      );
+
+      console.log(result);
+      console.log(reportResult);
+
+      res.send(reportResult);
+    });
   } finally {
   }
 }
