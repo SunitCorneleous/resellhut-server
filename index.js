@@ -55,6 +55,9 @@ async function run() {
     const reportedItemsCollections = client
       .db("resellxDB")
       .collection("reportedItems");
+    const paymentsCollection = client
+      .db("resellxDB")
+      .collection("confirmedPayment");
 
     // verify seller
     const verifySeller = async (req, res, next) => {
@@ -166,6 +169,45 @@ async function run() {
       res.send({
         clientSecret: paymentIntent.client_secret,
       });
+    });
+
+    // save confirmed payment
+    app.post("/payment", verifyJWT, verifyUser, async (req, res) => {
+      const paymentInfo = req.body;
+
+      const result = await paymentsCollection.insertOne(paymentInfo);
+
+      const bookingQuery = { _id: ObjectId(paymentInfo.bookingId) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          status: "paid",
+        },
+      };
+      const bookingResult = await bookingCollections.updateOne(
+        bookingQuery,
+        updatedDoc,
+        options
+      );
+
+      const productQuery = { _id: ObjectId(paymentInfo.productId) };
+      const productOptions = { upsert: true };
+      const updatedProduct = {
+        $set: {
+          saleStatus: "sold",
+        },
+      };
+      const productResult = await productsCollections.updateOne(
+        productQuery,
+        updatedProduct,
+        productOptions
+      );
+
+      console.log(result);
+      console.log(bookingResult);
+      console.log(productResult);
+
+      res.send(result);
     });
 
     // check user type
