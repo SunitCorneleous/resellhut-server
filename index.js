@@ -102,7 +102,7 @@ async function run() {
     });
 
     // get products by category
-    app.get("/category/:id", async (req, res) => {
+    app.get("/category/:id", verifyJWT, async (req, res) => {
       const categoryId = req.params.id;
       const categoryQuery = { _id: ObjectId(categoryId) };
 
@@ -159,6 +159,16 @@ async function run() {
       const user = allUsers.find(user => user.email === email);
 
       res.send({ userType: user.userType });
+    });
+
+    // get specific product for payment as user
+    app.get("/products/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+
+      const product = await productsCollections.findOne(query);
+
+      res.send(product);
     });
 
     // add products to db as seller
@@ -388,9 +398,6 @@ async function run() {
       const reportResult = await reportedItemsCollections.deleteOne(
         reportQuery
       );
-
-      console.log(result);
-      console.log(reportResult);
 
       res.send(reportResult);
     });
