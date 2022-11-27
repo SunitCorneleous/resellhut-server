@@ -172,7 +172,7 @@ async function run() {
     });
 
     // save confirmed payment
-    app.post("/payment", verifyJWT, verifyUser, async (req, res) => {
+    app.post("/payment", verifyJWT, async (req, res) => {
       const paymentInfo = req.body;
 
       const result = await paymentsCollection.insertOne(paymentInfo);
@@ -426,12 +426,12 @@ async function run() {
         updateProductDoc
       );
 
-      console.log(productResult);
-      res.send(productResult);
+      console.log(result);
+      res.send(result);
     });
 
     // report a product
-    app.post("/reportItem", verifyJWT, verifyUser, async (req, res) => {
+    app.post("/reportItem", verifyJWT, async (req, res) => {
       const item = req.body;
 
       const result = await reportedItemsCollections.insertOne(item);
@@ -462,6 +462,14 @@ async function run() {
       );
 
       res.send(reportResult);
+    });
+
+    app.get("/allbuyers", verifyJWT, verifySeller, async (req, res) => {
+      const email = req.query.email;
+      const query = { sellerEmail: email };
+      const result = await paymentsCollection.find(query).toArray();
+
+      res.send(result);
     });
   } finally {
   }
