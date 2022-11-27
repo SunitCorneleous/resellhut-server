@@ -4,6 +4,7 @@ const cors = require("cors");
 var jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 // middleware
 app.use(express.json());
@@ -150,6 +151,23 @@ async function run() {
       res.status(403).send({ accessToken: "" });
     });
 
+    // payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const payment = req.body;
+      const price = payment.price;
+      const amount = price * 100;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
     // check user type
     app.get("/usertype", async (req, res) => {
       const email = req.query.email;
@@ -165,10 +183,12 @@ async function run() {
     app.get("/products/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
+      const booking = await bookingCollections.findOne(query);
 
-      const product = await productsCollections.findOne(query);
+      const productQuery = { _id: ObjectId(booking.productId) };
+      const product = await productsCollections.findOne(productQuery);
 
-      res.send(product);
+      res.send({ product, booking });
     });
 
     // add products to db as seller
