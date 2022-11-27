@@ -51,6 +51,9 @@ async function run() {
     const usersCollections = client.db("resellxDB").collection("users");
     const productsCollections = client.db("resellxDB").collection("products");
     const bookingCollections = client.db("resellxDB").collection("booking");
+    const reportedItemsCollections = client
+      .db("resellxDB")
+      .collection("reportedItems");
 
     // verify seller
     const verifySeller = async (req, res, next) => {
@@ -354,6 +357,26 @@ async function run() {
       console.log(productResult);
       res.send(productResult);
     });
+
+    // report a product
+    app.post("/reportItem", verifyJWT, verifyUser, async (req, res) => {
+      const item = req.body;
+
+      const result = await reportedItemsCollections.insertOne(item);
+
+      res.send(result);
+    });
+
+    // get all reported items as admin
+    app.get("/reportItem", verifyJWT, verifyAdmin, async (req, res) => {
+      const query = {};
+
+      const allItems = await reportedItemsCollections.find(query).toArray();
+
+      res.send(allItems);
+    });
+
+    //
   } finally {
   }
 }
