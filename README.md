@@ -1,4 +1,4 @@
-# Resellhut Server
+# ResellHut Server
 
 ## Used Technologies
 
