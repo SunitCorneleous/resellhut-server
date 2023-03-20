@@ -486,6 +486,11 @@ app.get("/", (req, res) => {
   res.send("<h1>Resellx server is running</h1>");
 });
 
+// error route
+app.all("*", (req, res) => {
+  res.send("No route found");
+});
+
 // run app
 app.listen(port, () => {
   console.log(`server is running at port ${port}`);
