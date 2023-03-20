@@ -6,19 +6,21 @@ require("dotenv").config();
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
+const dbConnect = require("./utils/dbConnect");
+const productsRoute = require("./routes/products.route.js");
+
 // middleware
 app.use(express.json());
 app.use(cors());
 
+app.use("/products", productsRoute);
+
 // mongodb config
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const { query } = require("express");
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.jjvalws.mongodb.net/?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverApi: ServerApiVersion.v1,
-});
+
+// database connection
+dbConnect();
 
 //verify jwt
 function verifyJWT(req, res, next) {
@@ -46,6 +48,7 @@ function verifyJWT(req, res, next) {
 // mongodb run
 async function run() {
   try {
+    /* 
     const categoriesCollection = client
       .db("resellxDB")
       .collection("categories");
@@ -471,6 +474,7 @@ async function run() {
 
       res.send(result);
     });
+   */
   } finally {
   }
 }
