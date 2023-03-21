@@ -8,10 +8,13 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 const dbConnect = require("./utils/dbConnect");
 const productsRoute = require("./routes/v1/products.route.js");
+const viewCount = require("./middleware/viewCount.js");
 
 // middleware
 app.use(express.json());
 app.use(cors());
+
+// app.use(viewCount);
 
 app.use("/api/v1/products", productsRoute);
 

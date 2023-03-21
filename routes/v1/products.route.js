@@ -1,4 +1,5 @@
 const express = require("express");
+const viewCount = require("../../middleware/viewCount.js");
 const productController = require("./../../controllers/products.controller.js");
 const router = express.Router();
 
@@ -19,7 +20,7 @@ router
    * @apiError (Unauthorized 401)  Unauthorized  Only authenticated users can access the data
    * @apiError (Forbidden 403)     Forbidden     Only admins can access the data
    */
-  .get(productController.getAllProducts)
+  .get(viewCount, productController.getAllProducts)
   /**
    * @api {post} /post a product
    * @apiDescription Get all the tools
@@ -36,5 +37,7 @@ router
    * @apiError (Forbidden 403)     Forbidden     Only admins can access the data
    */
   .post(productController.addAProduct);
+
+router.route("/:id").delete(productController.removeProduct);
 
 module.exports = router;
